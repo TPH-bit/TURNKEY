@@ -1,40 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2 } from 'lucide-react';
 
-const mcqQuestions = [
-  {
-    id: 'examples',
-    question: 'Souhaitez-vous inclure des exemples pratiques ?',
-    options: ['Oui, beaucoup', 'Oui, quelques-uns', 'Non', 'Ne sait pas']
-  },
-  {
-    id: 'detail_level',
-    question: 'Quel niveau de détail technique ?',
-    options: ['Très détaillé', 'Modéré', 'Vulgarisé', 'Ne sait pas']
-  },
-  {
-    id: 'length',
-    question: 'Longueur souhaitée du document ?',
-    options: ['Court (2-5 pages)', 'Moyen (5-10 pages)', 'Long (10+ pages)', 'Ne sait pas']
-  }
-];
-
 export function MCQForm({ onComplete }) {
+  const [questions, setQuestions] = useState([]);
   const [responses, setResponses] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadQuestions();
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      const res = await fetch('/api/mcq/generate', {
+        method: 'POST'
+      });
+
+      if (!res.ok) {
+        throw new Error('Erreur lors de la génération des questions');
+      }
+
+      const data = await res.json();
+      setQuestions(data.questions || []);
+    } catch (error) {
+      console.error('Error loading questions:', error);
+      alert('Erreur lors du chargement des questions');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
-    if (Object.keys(responses).length < mcqQuestions.length) {
+    if (Object.keys(responses).length < questions.length) {
       alert('Veuillez répondre à toutes les questions');
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       const res = await fetch('/api/mcq/submit', {
@@ -52,33 +60,39 @@ export function MCQForm({ onComplete }) {
     } catch (error) {
       alert(error.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto flex flex-col items-center justify-center py-12 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Analyse de votre requête et génération des questions d'affinage...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Affinage</h2>
-        <p className="text-muted-foreground">
-          Quelques questions pour affiner le document
-        </p>
-      </div>
+      <p className="text-muted-foreground text-center">
+        Questions personnalisées basées sur votre requête et vos documents
+      </p>
 
       <div className="space-y-6">
-        {mcqQuestions.map((q) => (
-          <div key={q.id} className="space-y-3">
+        {questions.map((q, index) => (
+          <div key={index} className="space-y-3">
             <Label className="text-base font-medium">{q.question}</Label>
             <RadioGroup
-              value={responses[q.id]}
+              value={responses[`q${index}`]}
               onValueChange={(value) =>
-                setResponses((prev) => ({ ...prev, [q.id]: value }))
+                setResponses((prev) => ({ ...prev, [`q${index}`]: value }))
               }
             >
-              {q.options.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`${q.id}-${option}`} />
-                  <Label htmlFor={`${q.id}-${option}`} className="cursor-pointer">
+              {q.options.map((option, optIdx) => (
+                <div key={optIdx} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`q${index}-opt${optIdx}`} />
+                  <Label htmlFor={`q${index}-opt${optIdx}`} className="cursor-pointer font-normal">
                     {option}
                   </Label>
                 </div>
@@ -88,8 +102,8 @@ export function MCQForm({ onComplete }) {
         ))}
       </div>
 
-      <Button onClick={handleSubmit} disabled={loading} className="w-full" size="lg">
-        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      <Button onClick={handleSubmit} disabled={submitting} className="w-full" size="lg">
+        {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Continuer
       </Button>
     </div>
