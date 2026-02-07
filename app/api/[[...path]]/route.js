@@ -264,8 +264,8 @@ export async function POST(request) {
             file.name,
             filePath,
             ext,
-            extracted.text,
-            JSON.stringify(extracted.metadata)
+            extracted.text || `Fichier ${file.name} uploadé`,
+            JSON.stringify(extracted.metadata || {})
           );
 
           uploadedDocs.push({
@@ -276,10 +276,27 @@ export async function POST(request) {
           });
         } catch (error) {
           console.error(`Extraction failed for ${file.name}:`, error);
-          fs.unlinkSync(filePath);
-          return NextResponse.json({ 
-            error: `Erreur d'extraction pour ${file.name}: ${error.message}` 
-          }, { status: 400 });
+          
+          db.prepare(`
+            INSERT INTO uploaded_documents (id, session_id, filename, file_path, file_type, extracted_text, extracted_metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            docId,
+            sessionId,
+            file.name,
+            filePath,
+            ext,
+            `Document ${file.name} (extraction partielle)`,
+            JSON.stringify({ error: 'extraction_failed', filename: file.name })
+          );
+
+          uploadedDocs.push({
+            id: docId,
+            filename: file.name,
+            size: file.size,
+            extracted: false,
+            warning: 'Extraction partielle'
+          });
         }
       }
 
