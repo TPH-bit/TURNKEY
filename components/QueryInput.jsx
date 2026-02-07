@@ -51,20 +51,13 @@ export function QueryInput({ onComplete }) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Votre Requête</h2>
-        <p className="text-muted-foreground">
-          Décrivez précisément ce que vous souhaitez dans le document
-        </p>
-      </div>
-
       <div className="space-y-2">
-        <Label htmlFor="query" className="text-base">Requête</Label>
+        <Label htmlFor="query" className="text-base">Décrivez précisément ce que vous souhaitez dans le document</Label>
         <Textarea
           id="query"
           value={query}
           onChange={(e) => setQuery(e.target.value.slice(0, maxChars))}
-          placeholder="Décrivez votre besoin en détail..."
+          placeholder="Exemple: Je souhaite un rapport détaillé sur l'impact de l'intelligence artificielle dans le secteur bancaire, incluant les opportunités, les risques et les perspectives d'évolution..."
           className="min-h-[300px] text-base"
         />
         <div className="flex justify-between text-sm text-muted-foreground">
