@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Check, Loader2, Download, AlertCircle, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -68,7 +69,7 @@ export function GenerationView() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8">
       {generating && (
         <div className="space-y-4">
           <div className="flex items-center justify-center py-8">
@@ -128,36 +129,71 @@ export function GenerationView() {
             <Check className="h-4 w-4" />
             <AlertTitle>Document généré avec succès !</AlertTitle>
             <AlertDescription>
-              Votre document est prêt à être téléchargé.
+              {result.mode === 'demo' && result.notice && (
+                <p className="text-sm text-muted-foreground mt-2">{result.notice}</p>
+              )}
             </AlertDescription>
           </Alert>
 
-          <div className="bg-muted rounded-lg p-6 space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2">Informations du document</h3>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Citations : </span>
-                  <span className="font-medium">{result.citations?.length || 0}</span>
-                </p>
-                {result.validation && !result.validation.valid && (
-                  <div className="mt-3">
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Certaines sections ont moins de citations que recommandé.
-                      </AlertDescription>
-                    </Alert>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">{result.document?.title || 'Document généré'}</h3>
+                  <Button onClick={handleDownload} size="lg">
+                    <Download className="mr-2 h-5 w-5" />
+                    Télécharger (DOCX)
+                  </Button>
+                </div>
+
+                <div className="border-t pt-6 space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                  {result.document?.sections?.map((section, index) => (
+                    <div key={index} className="space-y-3">
+                      <h4 className="text-lg font-semibold text-primary">{section.title}</h4>
+                      <div className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        {section.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {result.citations && result.citations.length > 0 && (
+                  <div className="border-t pt-6 space-y-3">
+                    <h4 className="text-lg font-semibold">Sources & Références</h4>
+                    <div className="space-y-2">
+                      {result.citations.map((citation, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium">[{citation.number}]</span>{' '}
+                          <span className="italic">{citation.title}</span>
+                          {citation.url && (
+                            <span className="text-muted-foreground"> - {citation.url}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
 
-          <Button onClick={handleDownload} size="lg" className="w-full">
-            <Download className="mr-2 h-5 w-5" />
-            Télécharger le document (DOCX)
-          </Button>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center text-sm text-muted-foreground">
+                    <span>Citations : {result.citations?.length || 0}</span>
+                    {result.validation && !result.validation.valid && (
+                      <span className="text-amber-600">
+                        ⚠️ Certaines sections ont moins de citations que recommandé
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-center">
+            <Button onClick={handleDownload} size="lg" className="w-full max-w-md">
+              <Download className="mr-2 h-5 w-5" />
+              Télécharger le document complet (DOCX)
+            </Button>
+          </div>
         </div>
       )}
     </div>
