@@ -84,15 +84,6 @@ export default function Home() {
           {currentStep === 5 && <GenerationView />}
         </div>
       </main>
-
-      <footer className="border-t mt-auto">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>TURNKEY v1.0 - Documents sourcés et vérifiés</p>
-          <p className="mt-1">
-            Conçu pour un public 13+ | Modération active | Données conservées 24h
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
