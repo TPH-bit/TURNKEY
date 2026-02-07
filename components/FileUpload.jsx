@@ -84,12 +84,9 @@ export function FileUpload({ onComplete, onSkip }) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Documents</h2>
-        <p className="text-muted-foreground">
-          Uploadez vos documents pour des résultats sourcés et précis (optionnel)
-        </p>
-      </div>
+      <p className="text-muted-foreground text-center">
+        Uploadez vos documents pour des résultats sourcés et précis (optionnel mais recommandé)
+      </p>
 
       <div
         onDragEnter={handleDrag}
