@@ -326,6 +326,30 @@ export async function POST(request) {
       return NextResponse.json({ success: true });
     }
 
+    if (endpoint === 'mcq/generate') {
+      const sessionId = getSessionFromCookie(request);
+      if (!sessionId) {
+        return NextResponse.json({ error: 'No session' }, { status: 400 });
+      }
+
+      const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
+      
+      if (!session || !session.query) {
+        return NextResponse.json({ error: 'Session incomplète' }, { status: 400 });
+      }
+
+      const query = session.query;
+      const profileData = session.profile_data ? JSON.parse(session.profile_data) : {};
+      
+      const uploadedDocs = db.prepare(`
+        SELECT filename, file_type FROM uploaded_documents WHERE session_id = ?
+      `).all(sessionId);
+
+      const questions = generateSmartQuestions(query, profileData, uploadedDocs);
+
+      return NextResponse.json({ questions });
+    }
+
     if (endpoint === 'generate') {
       const sessionId = getSessionFromCookie(request);
       if (!sessionId) {
