@@ -18,6 +18,131 @@ import { writeFile } from 'fs/promises';
 initializeSchema();
 initializeDefaultAdmin();
 
+function generateSmartQuestions(query, profileData, uploadedDocs) {
+  const queryLower = query.toLowerCase();
+  const domain = profileData?.domain || '';
+  const objective = profileData?.objective || '';
+  
+  const questions = [];
+  
+  const keywords = {
+    technique: ['technologie', 'technique', 'informatique', 'software', 'développement', 'système'],
+    analyse: ['analyse', 'étude', 'recherche', 'évaluation', 'comparaison'],
+    pratique: ['pratique', 'exemple', 'cas', 'application', 'mise en œuvre'],
+    theorie: ['théorie', 'concept', 'principe', 'fondement'],
+    historique: ['histoire', 'évolution', 'origine', 'développement', 'passé'],
+    futur: ['futur', 'perspective', 'tendance', 'avenir', 'prévision']
+  };
+  
+  const hasKeywords = (list) => list.some(kw => queryLower.includes(kw));
+  
+  questions.push({
+    question: "Quel niveau de détail souhaitez-vous pour ce document ?",
+    options: [
+      "Vue d'ensemble générale (synthétique)",
+      "Niveau intermédiaire (équilibré)",
+      "Très détaillé (approfondi)",
+      "Technique / Spécialisé"
+    ]
+  });
+  
+  if (hasKeywords(keywords.pratique) || objective === 'formation' || objective === 'presentation') {
+    questions.push({
+      question: "Souhaitez-vous inclure des exemples concrets et des cas pratiques ?",
+      options: [
+        "Oui, de nombreux exemples",
+        "Oui, quelques exemples clés",
+        "Non, rester théorique",
+        "Uniquement des références aux documents fournis"
+      ]
+    });
+  }
+  
+  if (hasKeywords(keywords.technique) || domain === 'technologie' || domain === 'sciences') {
+    questions.push({
+      question: "Quel niveau de vulgarisation technique attendez-vous ?",
+      options: [
+        "Très vulgarisé (grand public)",
+        "Vulgarisé avec quelques termes techniques",
+        "Technique mais accessible",
+        "Hautement technique (expert)"
+      ]
+    });
+  }
+  
+  if (hasKeywords(keywords.analyse) || objective === 'recherche' || objective === 'rapport') {
+    questions.push({
+      question: "Souhaitez-vous une analyse critique ou descriptive ?",
+      options: [
+        "Descriptive (présenter les faits)",
+        "Analytique (analyser les liens de cause à effet)",
+        "Critique (évaluer et donner un avis argumenté)",
+        "Comparative (comparer différentes approches)"
+      ]
+    });
+  }
+  
+  if (uploadedDocs.length > 0) {
+    questions.push({
+      question: "Comment souhaitez-vous que les documents uploadés soient utilisés ?",
+      options: [
+        "Comme sources principales (base du document)",
+        "Comme sources complémentaires",
+        "Uniquement pour les citations",
+        "Pour valider les informations externes"
+      ]
+    });
+  }
+  
+  if (hasKeywords(keywords.futur) || hasKeywords(keywords.historique)) {
+    questions.push({
+      question: "Quelle perspective temporelle privilégier ?",
+      options: [
+        "Contexte historique important",
+        "Situation actuelle principalement",
+        "Perspectives futures et tendances",
+        "Vue d'ensemble (passé, présent, futur)"
+      ]
+    });
+  }
+  
+  questions.push({
+    question: "Quel ton souhaitez-vous pour la rédaction ?",
+    options: [
+      "Académique / Formel",
+      "Professionnel / Neutre",
+      "Pédagogique / Explicatif",
+      "Accessible / Grand public"
+    ]
+  });
+  
+  const structureQuestion = {
+    question: "Quelle structure préférez-vous pour le document ?",
+    options: [
+      "Classique (Introduction, Développement, Conclusion)",
+      "Analytique (Problématique, Analyse, Solutions)",
+      "Thématique (Par grands thèmes)",
+      "Chronologique (Par ordre temporel)"
+    ]
+  };
+  
+  if (objective === 'memoire' || objective === 'recherche') {
+    questions.push(structureQuestion);
+  }
+  
+  questions.push({
+    question: "Longueur souhaitée du document final ?",
+    options: [
+      "Court (3-5 pages)",
+      "Moyen (5-10 pages)",
+      "Long (10-20 pages)",
+      "Très détaillé (20+ pages)"
+    ]
+  });
+  
+  return questions.slice(0, 8);
+}
+
 function getSessionFromCookie(request) {
   const cookie = request.cookies.get('session_id');
   return cookie?.value || null;
