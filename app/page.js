@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Stepper } from '@/components/Stepper';
 import { ProfileForm } from '@/components/ProfileForm';
 import { QueryInput } from '@/components/QueryInput';
 import { FileUpload } from '@/components/FileUpload';
 import { MCQForm } from '@/components/MCQForm';
 import { GenerationView } from '@/components/GenerationView';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -36,6 +36,12 @@ export default function Home() {
     setCurrentStep((prev) => prev + 1);
   };
 
+  const handleGoBack = () => {
+    if (currentStep > 1 && currentStep < 5) {
+      setCurrentStep((prev) => prev - 1);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -56,9 +62,16 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Stepper currentStep={currentStep} />
+        {currentStep > 1 && currentStep < 5 && (
+          <div className="max-w-3xl mx-auto mb-6">
+            <Button variant="ghost" onClick={handleGoBack}>
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Retour
+            </Button>
+          </div>
+        )}
 
-        <div className="mt-12 mb-12">
+        <div className="mt-6 mb-12">
           {currentStep === 1 && <ProfileForm onComplete={handleStepComplete} />}
           {currentStep === 2 && <QueryInput onComplete={handleStepComplete} />}
           {currentStep === 3 && (
