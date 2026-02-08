@@ -18,14 +18,38 @@ import { writeFile } from 'fs/promises';
 const sql = getDB;
 
 let initPromise = null;
+let initDone = false;
 
 async function ensureInitialized() {
-  if (!initPromise) {
-    initPromise = Promise.all([
-      initializeSchema(),
-      initializeDefaultAdmin()
-    ]);
+  // Skip si déjà fait
+  if (initDone) {
+    return;
   }
+  
+  console.log('[API] ensureInitialized appelé');
+  
+  if (!initPromise) {
+    console.log('[API] Création de la promesse d\'initialisation');
+    initPromise = (async () => {
+      try {
+        console.log('[API] Début initializeSchema...');
+        await initializeSchema();
+        console.log('[API] initializeSchema terminé');
+        
+        console.log('[API] Début initializeDefaultAdmin...');
+        await initializeDefaultAdmin();
+        console.log('[API] initializeDefaultAdmin terminé');
+        
+        initDone = true;
+        console.log('[API] Initialisation complète');
+      } catch (error) {
+        console.error('[API] ERREUR initialisation:', error.message);
+        initDone = true; // On marque comme fait pour éviter les boucles
+        throw error;
+      }
+    })();
+  }
+  
   await initPromise;
 }
 
