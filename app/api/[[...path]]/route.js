@@ -281,6 +281,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  await ensureInitialized();
+  
   const { pathname } = new URL(request.url);
   const pathSegments = pathname.split('/').filter(Boolean);
   const endpoint = pathSegments.slice(1).join('/');
