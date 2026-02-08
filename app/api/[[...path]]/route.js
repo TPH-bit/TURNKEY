@@ -202,16 +202,31 @@ export async function GET(request) {
     }
 
     if (endpoint === 'session/init') {
+      console.log('[API] session/init - Début');
       const sessionId = uuidv4();
       const expiresAt = new Date(Date.now() + SYSTEM_CONFIG.SESSION_RETENTION_HOURS * 3600000).toISOString();
       
-      await sql`
-        INSERT INTO sessions (id, expires_at, status)
-        VALUES (${sessionId}, ${expiresAt}, 'active')
-      `;
+      console.log('[API] session/init - Insertion en DB...');
+      try {
+        await sql`
+          INSERT INTO sessions (id, expires_at, status)
+          VALUES (${sessionId}, ${expiresAt}, 'active')
+        `;
+        console.log('[API] session/init - Insertion OK');
+      } catch (dbError) {
+        console.error('[API] session/init - ERREUR DB:', dbError.message);
+        // Continuer même si DB échoue pour le debugging
+      }
       
-      await trackEvent(sessionId, 'start', {});
+      console.log('[API] session/init - trackEvent...');
+      try {
+        await trackEvent(sessionId, 'start', {});
+        console.log('[API] session/init - trackEvent OK');
+      } catch (trackError) {
+        console.error('[API] session/init - ERREUR trackEvent:', trackError.message);
+      }
       
+      console.log('[API] session/init - Réponse envoyée');
       return NextResponse.json(
         { sessionId, expiresAt },
         { headers: setSessionCookie(sessionId) }
