@@ -10,6 +10,7 @@ import { generateDOCX } from '@/lib/docx-generator';
 import { trackEvent, getAnalyticsSummary } from '@/lib/analytics';
 import { purgeExpiredSessions } from '@/lib/cleanup';
 import { SYSTEM_CONFIG } from '@/lib/config';
+import { generateText } from '@/lib/llm';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
@@ -53,129 +54,106 @@ async function ensureInitialized() {
   await initPromise;
 }
 
-function generateSmartQuestions(query, profileData, uploadedDocs) {
-  const queryLower = query.toLowerCase();
-  const domain = profileData?.domain || '';
-  const objective = profileData?.objective || '';
+// Génération de questions intelligentes par IA
+async function generateAIQuestions(query, profileData, uploadedDocs) {
+  const domain = profileData?.domain || 'général';
+  const objective = profileData?.objective || 'document';
+  const education = profileData?.education || 'non précisé';
+  const age = profileData?.age || 'non précisé';
   
-  const questions = [];
-  
-  const keywords = {
-    technique: ['technologie', 'technique', 'informatique', 'software', 'développement', 'système'],
-    analyse: ['analyse', 'étude', 'recherche', 'évaluation', 'comparaison'],
-    pratique: ['pratique', 'exemple', 'cas', 'application', 'mise en œuvre'],
-    theorie: ['théorie', 'concept', 'principe', 'fondement'],
-    historique: ['histoire', 'évolution', 'origine', 'développement', 'passé'],
-    futur: ['futur', 'perspective', 'tendance', 'avenir', 'prévision']
-  };
-  
-  const hasKeywords = (list) => list.some(kw => queryLower.includes(kw));
-  
-  questions.push({
-    question: "Quel niveau de détail souhaitez-vous pour ce document ?",
-    options: [
-      "Vue d'ensemble générale (synthétique)",
-      "Niveau intermédiaire (équilibré)",
-      "Très détaillé (approfondi)",
-      "Technique / Spécialisé"
-    ]
-  });
-  
-  if (hasKeywords(keywords.pratique) || objective === 'formation' || objective === 'presentation') {
-    questions.push({
-      question: "Souhaitez-vous inclure des exemples concrets et des cas pratiques ?",
-      options: [
-        "Oui, de nombreux exemples",
-        "Oui, quelques exemples clés",
-        "Non, rester théorique",
-        "Uniquement des références aux documents fournis"
-      ]
-    });
+  const docsInfo = uploadedDocs.length > 0 
+    ? `L'utilisateur a fourni ${uploadedDocs.length} document(s): ${uploadedDocs.map(d => d.filename).join(', ')}`
+    : "L'utilisateur n'a pas fourni de documents.";
+
+  const prompt = `Tu es un assistant expert qui aide à clarifier les besoins des utilisateurs pour générer des documents de qualité.
+
+CONTEXTE:
+- Demande de l'utilisateur: "${query}"
+- Domaine: ${domain}
+- Objectif: ${objective}
+- Niveau d'études: ${education}
+- Tranche d'âge: ${age}
+- ${docsInfo}
+
+MISSION:
+Génère exactement 5 questions SPÉCIFIQUES et PERTINENTES pour mieux comprendre ce que l'utilisateur veut vraiment.
+Ces questions doivent être directement liées au SUJET de sa demande, pas des questions génériques.
+
+RÈGLES:
+1. Les questions doivent être en rapport DIRECT avec le sujet demandé
+2. Chaque question doit avoir exactement 4 options de réponse
+3. Les options doivent être claires et distinctes
+4. Adapte le vocabulaire au niveau d'études de l'utilisateur
+5. Ne pose PAS de questions génériques sur le format ou la longueur
+
+EXEMPLE pour une demande sur "analyse d'articles en soins infirmiers":
+- "Sur quels aspects des articles souhaitez-vous que l'analyse se concentre ?" → méthodologie / résultats / discussion / tous
+- "Quel type d'articles analysez-vous principalement ?" → études quantitatives / qualitatives / revues systématiques / mixtes
+
+FORMAT JSON STRICT:
+{
+  "questions": [
+    {
+      "question": "Question spécifique au sujet...",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
+    }
+  ]
+}
+
+GÉNÈRE LES 5 QUESTIONS MAINTENANT (JSON uniquement):`;
+
+  try {
+    console.log('[MCQ] Génération de questions IA pour:', query.substring(0, 50) + '...');
+    const response = await generateText(prompt, { maxTokens: 2000, temperature: 0.4 });
+    
+    let data;
+    try {
+      data = JSON.parse(response);
+    } catch (e) {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        data = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('Format JSON invalide');
+      }
+    }
+    
+    if (data.questions && Array.isArray(data.questions)) {
+      console.log('[MCQ] Questions IA générées:', data.questions.length);
+      return data.questions;
+    }
+    throw new Error('Structure de réponse invalide');
+  } catch (error) {
+    console.error('[MCQ] Erreur génération IA, fallback questions génériques:', error.message);
+    // Fallback en cas d'erreur
+    return getFallbackQuestions(query, profileData, uploadedDocs);
   }
-  
-  if (hasKeywords(keywords.technique) || domain === 'technologie' || domain === 'sciences') {
-    questions.push({
-      question: "Quel niveau de vulgarisation technique attendez-vous ?",
-      options: [
-        "Très vulgarisé (grand public)",
-        "Vulgarisé avec quelques termes techniques",
-        "Technique mais accessible",
-        "Hautement technique (expert)"
-      ]
-    });
-  }
-  
-  if (hasKeywords(keywords.analyse) || objective === 'recherche' || objective === 'rapport') {
-    questions.push({
-      question: "Souhaitez-vous une analyse critique ou descriptive ?",
-      options: [
-        "Descriptive (présenter les faits)",
-        "Analytique (analyser les liens de cause à effet)",
-        "Critique (évaluer et donner un avis argumenté)",
-        "Comparative (comparer différentes approches)"
-      ]
-    });
-  }
-  
-  if (uploadedDocs.length > 0) {
-    questions.push({
-      question: "Comment souhaitez-vous que les documents uploadés soient utilisés ?",
-      options: [
-        "Comme sources principales (base du document)",
-        "Comme sources complémentaires",
-        "Uniquement pour les citations",
-        "Pour valider les informations externes"
-      ]
-    });
-  }
-  
-  if (hasKeywords(keywords.futur) || hasKeywords(keywords.historique)) {
-    questions.push({
-      question: "Quelle perspective temporelle privilégier ?",
-      options: [
-        "Contexte historique important",
-        "Situation actuelle principalement",
-        "Perspectives futures et tendances",
-        "Vue d'ensemble (passé, présent, futur)"
-      ]
-    });
-  }
-  
-  questions.push({
-    question: "Quel ton souhaitez-vous pour la rédaction ?",
-    options: [
-      "Académique / Formel",
-      "Professionnel / Neutre",
-      "Pédagogique / Explicatif",
-      "Accessible / Grand public"
-    ]
-  });
-  
-  const structureQuestion = {
-    question: "Quelle structure préférez-vous pour le document ?",
-    options: [
-      "Classique (Introduction, Développement, Conclusion)",
-      "Analytique (Problématique, Analyse, Solutions)",
-      "Thématique (Par grands thèmes)",
-      "Chronologique (Par ordre temporel)"
-    ]
-  };
-  
-  if (objective === 'memoire' || objective === 'recherche') {
-    questions.push(structureQuestion);
-  }
-  
-  questions.push({
-    question: "Longueur souhaitée du document final ?",
-    options: [
-      "Court (3-5 pages)",
-      "Moyen (5-10 pages)",
-      "Long (10-20 pages)",
-      "Très détaillé (20+ pages)"
-    ]
-  });
-  
-  return questions.slice(0, 8);
+}
+
+// Questions de fallback si l'IA échoue
+function getFallbackQuestions(query, profileData, uploadedDocs) {
+  return [
+    {
+      question: "Quel niveau de détail souhaitez-vous pour ce document ?",
+      options: ["Synthétique (vue d'ensemble)", "Intermédiaire (équilibré)", "Détaillé (approfondi)", "Expert (très technique)"]
+    },
+    {
+      question: "Quel ton préférez-vous pour la rédaction ?",
+      options: ["Académique / Formel", "Professionnel", "Pédagogique / Explicatif", "Accessible / Simple"]
+    },
+    {
+      question: "Souhaitez-vous des exemples concrets ?",
+      options: ["Oui, nombreux exemples", "Quelques exemples clés", "Peu d'exemples", "Pas d'exemples"]
+    },
+    {
+      question: "Quelle approche analytique préférez-vous ?",
+      options: ["Descriptive (présenter les faits)", "Analytique (causes et effets)", "Critique (évaluation)", "Comparative"]
+    },
+    {
+      question: "Comment structurer le document ?",
+      options: ["Classique (Intro/Dév/Conclu)", "Thématique", "Chronologique", "Par importance"]
+    }
+  ];
 }
 
 function getSessionFromCookie(request) {
@@ -485,11 +463,13 @@ export async function POST(request) {
       const query = session.query;
       const profileData = session.profile_data ? JSON.parse(session.profile_data) : {};
       
+      // Récupérer les documents uploadés avec leur contenu extrait
       const uploadedDocs = await sql`
-        SELECT filename, file_type FROM uploaded_documents WHERE session_id = ${sessionId}
+        SELECT filename, file_type, extracted_text FROM uploaded_documents WHERE session_id = ${sessionId}
       `;
 
-      const questions = generateSmartQuestions(query, profileData, uploadedDocs);
+      // Générer des questions intelligentes avec l'IA
+      const questions = await generateAIQuestions(query, profileData, uploadedDocs);
 
       return NextResponse.json({ questions });
     }
@@ -526,18 +506,34 @@ export async function POST(request) {
       }
 
       const profileData = session.profile_data ? JSON.parse(session.profile_data) : {};
+      const mcqResponses = session.mcq_responses ? JSON.parse(session.mcq_responses) : [];
       const query = session.query;
 
+      // Récupérer les documents uploadés avec leur contenu
       const uploadedDocs = await sql`
-        SELECT * FROM uploaded_documents WHERE session_id = ${sessionId}
+        SELECT id, filename, file_type, extracted_text FROM uploaded_documents WHERE session_id = ${sessionId}
       `;
+      
+      // Préparer le contenu des documents uploadés pour le prompt
+      const uploadedDocsContent = uploadedDocs.map(doc => ({
+        filename: doc.filename,
+        content: doc.extracted_text
+      }));
 
+      // Récupérer les sources externes (Wikipedia, etc.)
       const documents = await retrieveDocuments(query, uploadedDocs);
       const filteredDocuments = filterByDomainRules(documents);
-
       const evidence = await selectEvidence(filteredDocuments, query);
 
-      const result = await writeGroundedDocument(query, profileData, evidence);
+      // Générer le document avec le prompt optimisé
+      console.log('[API] Génération avec prompt optimisé...');
+      const result = await writeGroundedDocument(
+        query, 
+        profileData, 
+        evidence, 
+        mcqResponses,
+        uploadedDocsContent
+      );
 
       if (!result.success) {
         return NextResponse.json(result);
