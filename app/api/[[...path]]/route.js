@@ -166,6 +166,8 @@ function setSessionCookie(sessionId) {
 }
 
 export async function GET(request) {
+  await ensureInitialized();
+  
   const { searchParams, pathname } = new URL(request.url);
   const pathSegments = pathname.split('/').filter(Boolean);
   const endpoint = pathSegments.slice(1).join('/');
