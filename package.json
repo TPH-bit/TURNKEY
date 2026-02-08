@@ -44,7 +44,6 @@
         "@tanstack/react-table": "^8.21.3",
         "axios": "^1.10.0",
         "bcryptjs": "^3.0.3",
-        "better-sqlite3": "^12.6.2",
         "cheerio": "^1.2.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
