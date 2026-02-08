@@ -132,7 +132,7 @@ GÉNÈRE LES 9 QUESTIONS MAINTENANT (JSON uniquement):`;
     // Ajouter la 10ème question obligatoire sur le nombre de pages
     questions.push({
       question: "Combien de pages doit comporter votre document ?",
-      options: ["Court (2-3 pages)", "Moyen (4-6 pages)", "Long (7-10 pages)", "Très détaillé (10+ pages)", "Je ne sais pas"]
+      options: ["1 à 5 pages", "5 à 10 pages", "10 à 20 pages", "20 à 40 pages", "Je ne sais pas"]
     });
     
     console.log('[MCQ] Questions IA générées:', questions.length);
@@ -184,7 +184,7 @@ function getFallbackQuestions(query, profileData, uploadedDocs) {
     },
     {
       question: "Combien de pages doit comporter votre document ?",
-      options: ["Court (2-3 pages)", "Moyen (4-6 pages)", "Long (7-10 pages)", "Très détaillé (10+ pages)", "Je ne sais pas"]
+      options: ["1 à 5 pages", "5 à 10 pages", "10 à 20 pages", "20 à 40 pages", "Je ne sais pas"]
     }
   ];
 }
