@@ -17,8 +17,17 @@ import { writeFile } from 'fs/promises';
 
 const sql = getDB;
 
-initializeSchema();
-initializeDefaultAdmin();
+let initPromise = null;
+
+async function ensureInitialized() {
+  if (!initPromise) {
+    initPromise = Promise.all([
+      initializeSchema(),
+      initializeDefaultAdmin()
+    ]);
+  }
+  await initPromise;
+}
 
 function generateSmartQuestions(query, profileData, uploadedDocs) {
   const queryLower = query.toLowerCase();
