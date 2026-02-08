@@ -20,13 +20,24 @@ export default function Home() {
 
   const initSession = async () => {
     try {
-      const res = await fetch('/api/session/init');
+      console.log('Initializing session...');
+      const res = await fetch('/api/session/init', {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
+      console.log('Session initialized:', data);
       setSessionId(data.sessionId);
       setCurrentStep(1);
     } catch (error) {
       console.error('Session init error:', error);
-      alert('Erreur lors de l\'initialisation de la session');
+      alert('Erreur lors de l\'initialisation de la session: ' + error.message);
     } finally {
       setLoading(false);
     }
