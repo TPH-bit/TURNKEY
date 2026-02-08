@@ -76,21 +76,23 @@ CONTEXTE:
 - ${docsInfo}
 
 MISSION:
-Génère exactement 5 questions SPÉCIFIQUES et PERTINENTES pour mieux comprendre ce que l'utilisateur veut vraiment.
+Génère exactement 9 questions SPÉCIFIQUES et PERTINENTES pour mieux comprendre ce que l'utilisateur veut vraiment.
 Ces questions doivent être directement liées au SUJET de sa demande, pas des questions génériques.
 
-RÈGLES:
-1. Les questions doivent être en rapport DIRECT avec le sujet demandé
-2. Chaque question doit avoir exactement 4 options de réponse
-3. Les options doivent être claires et distinctes
+RÈGLES STRICTES:
+1. Chaque question doit être en rapport DIRECT avec le sujet demandé
+2. Chaque question doit avoir exactement 4 options de réponse pertinentes
+3. Les options doivent être claires, distinctes et utiles
 4. Adapte le vocabulaire au niveau d'études de l'utilisateur
-5. Ne pose PAS de questions génériques sur le format ou la longueur
+5. Les questions doivent aider à comprendre les BESOINS PRÉCIS
+6. Pose des questions sur : le public cible, le niveau de détail, l'angle d'approche, les aspects prioritaires, etc.
 
-EXEMPLE pour une demande sur "analyse d'articles en soins infirmiers":
+EXEMPLES de bonnes questions pour "analyse d'articles en soins infirmiers":
 - "Sur quels aspects des articles souhaitez-vous que l'analyse se concentre ?" → méthodologie / résultats / discussion / tous
 - "Quel type d'articles analysez-vous principalement ?" → études quantitatives / qualitatives / revues systématiques / mixtes
+- "Quel est le public cible de cette analyse ?" → étudiants débutants / étudiants avancés / professionnels / chercheurs
 
-FORMAT JSON STRICT:
+FORMAT JSON STRICT (exactement 9 questions):
 {
   "questions": [
     {
@@ -100,11 +102,11 @@ FORMAT JSON STRICT:
   ]
 }
 
-GÉNÈRE LES 5 QUESTIONS MAINTENANT (JSON uniquement):`;
+GÉNÈRE LES 9 QUESTIONS MAINTENANT (JSON uniquement):`;
 
   try {
-    console.log('[MCQ] Génération de questions IA pour:', query.substring(0, 50) + '...');
-    const response = await generateText(prompt, { maxTokens: 2000, temperature: 0.4 });
+    console.log('[MCQ] Génération de 9 questions IA pour:', query.substring(0, 50) + '...');
+    const response = await generateText(prompt, { maxTokens: 3000, temperature: 0.4 });
     
     let data;
     try {
@@ -118,14 +120,25 @@ GÉNÈRE LES 5 QUESTIONS MAINTENANT (JSON uniquement):`;
       }
     }
     
+    let questions = [];
     if (data.questions && Array.isArray(data.questions)) {
-      console.log('[MCQ] Questions IA générées:', data.questions.length);
-      return data.questions;
+      // Ajouter "Je ne sais pas" comme 5ème option à chaque question
+      questions = data.questions.slice(0, 9).map(q => ({
+        question: q.question,
+        options: [...q.options.slice(0, 4), "Je ne sais pas"]
+      }));
     }
-    throw new Error('Structure de réponse invalide');
+    
+    // Ajouter la 10ème question obligatoire sur le nombre de pages
+    questions.push({
+      question: "Combien de pages doit comporter votre document ?",
+      options: ["Court (2-3 pages)", "Moyen (4-6 pages)", "Long (7-10 pages)", "Très détaillé (10+ pages)", "Je ne sais pas"]
+    });
+    
+    console.log('[MCQ] Questions IA générées:', questions.length);
+    return questions;
   } catch (error) {
     console.error('[MCQ] Erreur génération IA, fallback questions génériques:', error.message);
-    // Fallback en cas d'erreur
     return getFallbackQuestions(query, profileData, uploadedDocs);
   }
 }
@@ -134,24 +147,44 @@ GÉNÈRE LES 5 QUESTIONS MAINTENANT (JSON uniquement):`;
 function getFallbackQuestions(query, profileData, uploadedDocs) {
   return [
     {
-      question: "Quel niveau de détail souhaitez-vous pour ce document ?",
-      options: ["Synthétique (vue d'ensemble)", "Intermédiaire (équilibré)", "Détaillé (approfondi)", "Expert (très technique)"]
+      question: "Quel est le public cible de ce document ?",
+      options: ["Débutants / Grand public", "Étudiants", "Professionnels", "Experts / Chercheurs", "Je ne sais pas"]
+    },
+    {
+      question: "Quel niveau de détail souhaitez-vous ?",
+      options: ["Vue d'ensemble générale", "Niveau intermédiaire", "Très détaillé", "Exhaustif", "Je ne sais pas"]
     },
     {
       question: "Quel ton préférez-vous pour la rédaction ?",
-      options: ["Académique / Formel", "Professionnel", "Pédagogique / Explicatif", "Accessible / Simple"]
+      options: ["Académique / Formel", "Professionnel", "Pédagogique / Explicatif", "Accessible / Simple", "Je ne sais pas"]
     },
     {
       question: "Souhaitez-vous des exemples concrets ?",
-      options: ["Oui, nombreux exemples", "Quelques exemples clés", "Peu d'exemples", "Pas d'exemples"]
+      options: ["Oui, nombreux exemples", "Quelques exemples clés", "Peu d'exemples", "Pas d'exemples", "Je ne sais pas"]
     },
     {
       question: "Quelle approche analytique préférez-vous ?",
-      options: ["Descriptive (présenter les faits)", "Analytique (causes et effets)", "Critique (évaluation)", "Comparative"]
+      options: ["Descriptive", "Analytique", "Critique", "Comparative", "Je ne sais pas"]
+    },
+    {
+      question: "Quels aspects doivent être prioritaires ?",
+      options: ["Théorie / Concepts", "Pratique / Applications", "Études de cas", "Recommandations", "Je ne sais pas"]
     },
     {
       question: "Comment structurer le document ?",
-      options: ["Classique (Intro/Dév/Conclu)", "Thématique", "Chronologique", "Par importance"]
+      options: ["Classique (Intro/Dév/Conclu)", "Thématique", "Chronologique", "Par importance", "Je ne sais pas"]
+    },
+    {
+      question: "Souhaitez-vous des recommandations ou conclusions ?",
+      options: ["Oui, détaillées", "Oui, synthétiques", "Juste une conclusion", "Non", "Je ne sais pas"]
+    },
+    {
+      question: "Quel format de présentation préférez-vous ?",
+      options: ["Texte continu", "Avec listes et puces", "Avec tableaux", "Mixte", "Je ne sais pas"]
+    },
+    {
+      question: "Combien de pages doit comporter votre document ?",
+      options: ["Court (2-3 pages)", "Moyen (4-6 pages)", "Long (7-10 pages)", "Très détaillé (10+ pages)", "Je ne sais pas"]
     }
   ];
 }
