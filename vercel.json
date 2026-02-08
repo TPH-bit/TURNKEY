@@ -1,8 +1,12 @@
 {
-  "crons": [
+  "version": 2,
+  "builds": [
     {
-      "path": "/api/cron/purge",
-      "schedule": "0 */6 * * *"
+      "src": "package.json",
+      "use": "@vercel/next"
     }
-  ]
+  ],
+  "env": {
+    "GOOGLE_GEMINI_API_KEY": "@gemini_api_key"
+  }
 }
