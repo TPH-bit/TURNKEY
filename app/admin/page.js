@@ -233,7 +233,7 @@ export default function AdminPage() {
                 <div>
                   <h3 className="font-semibold mb-2">Purge automatique</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Supprimer les sessions et fichiers expirés (>24h)
+                    Supprimer les sessions et fichiers expirés (&gt;24h)
                   </p>
                   <Button onClick={handlePurge} variant="outline">
                     Lancer la purge
